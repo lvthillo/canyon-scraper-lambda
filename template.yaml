@@ -1,0 +1,90 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Canyon Lambda
+
+Globals:
+  Function:
+    Runtime: python3.8
+    Timeout: 20
+    MemorySize: 128
+
+Resources:
+  ScraperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: canyon-scraper-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: "/"
+      Policies:
+        -
+          PolicyName: sns-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:publish
+                Resource:
+                  - !Ref Topic
+  Scraper:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: canyon-scraper
+      CodeUri: src/
+      Handler: lambda.lambda_handler
+      Runtime: python3.8
+      Role: !GetAtt ScraperRole.Arn
+      Environment:
+        Variables:
+          TOPIC: !Ref Topic
+      Layers:
+        - !Ref libs
+  libs:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: python-lib
+      Description: Dependencies for the canyon scraper
+      ContentUri: s3://lvthillo-layers/python.zip
+      CompatibleRuntimes:
+        - python3.8
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/canyon-scraper
+      RetentionInDays: 1
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: canyon-topic
+      Subscription: 
+        - Endpoint: lorenz.vanthillo@gmail.com
+          Protocol: email
+      TopicName: canyon-topic
+  Event:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger every minute
+      Name: ScraperEvent
+      # Run every minute when I don't sleep
+      ScheduleExpression: cron(0/1 6-23 * * ? *)
+      Targets:
+        - Arn: !GetAtt Scraper.Arn
+          Id: canyon-scraper
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt Scraper.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt Event.Arn
