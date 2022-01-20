@@ -6,8 +6,7 @@ import boto3
 from bs4 import BeautifulSoup
 
 client = boto3.client("sns")
-
-url = "https://www.canyon.com/nl-be/road-bikes/endurance-bikes/endurace/cf-sl/endurace-cf-sl-8-disc/2948.html"
+url = "https://www.canyon.com/nl-be/road-bikes/endurance-bikes/endurace/cf-sl/endurace-cf-sl-8/3364.html?dwvar_3364_pv_rahmenfarbe=GY%2FBK"
 # url = "https://www.canyon.com/nl-be/gravel-bikes/bike-packing/grizl/cf-sl/grizl-cf-sl-8-suspension-1by/3237.html"
 
 
@@ -23,11 +22,11 @@ def lambda_handler(event, context):
         text = div.text
         items.append(text.strip())
 
-    # size small is 3th of the list
-    small_item = items[2]
+    # size small is 4th of the list
+    small_item = items[3]
     print("item: " + small_item)
 
-    if small_item != "Uitverkocht":
+    if "Binnenkort" not in small_item:
         print("alert!")
         client.publish(
             TopicArn=os.environ["TOPIC"],
