@@ -68,7 +68,7 @@ Resources:
     Properties: 
       DisplayName: canyon-topic
       Subscription: 
-        - Endpoint: lorenz.vanthillo@gmail.com
+        - Endpoint: <your-email@mail.com>
           Protocol: email
       TopicName: canyon-topic
   Event:
